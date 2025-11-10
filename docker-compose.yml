@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:18.0-alpine3.22
+    container_name: autogo-postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data/postgres/:/var/lib/postgresql/18/docker
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: admindb
+      PGPASSWORD: postgres
+      PGDATA: /var/lib/postgresql/18/docker
+    networks:
+      - autogo
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+  valkey:
+    image: valkey/valkey:8.1.4-alpine3.22
+    container_name: autogo-valkey
+    ports:
+      - 6379:6379
+    volumes:
+      - ./data/valkey:/data
+    environment:
+      ALLOW_EMPTY_PASSWORD: no
+      VALKEY_PASSWORD: password
+      VALKEY_TLS_ENABLED: no
+    networks:
+      - autogo
+  setup-database:
+    image: hashicorp/terraform:latest
+    container_name: autogo-setup-database
+    working_dir: /workplace
+    volumes:
+      - ./setup-database:/workplace
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - autogo
+    env_file:
+      - .env
+    environment:
+      TF_VAR_host: postgres
+      TF_VAR_port: 5432
+      TF_VAR_admin_user: postgres
+      TF_VAR_admin_password: password
+      TF_VAR_db_name: aws-auto-go-app
+      TF_VAR_db_user: aws-auto-go-app
+      TF_VAR_db_password: ${DB_PASSWORD}
+      TF_VAR_schema_name: autogo
+    entrypoint: ['sh', '-c']
+    command:
+      - 'terraform init && terraform apply -auto-approve && terraform output connection_string'
+networks:
+  autogo:
+    name: autogo
+    driver: bridge

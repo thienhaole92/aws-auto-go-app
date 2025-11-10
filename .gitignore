@@ -1,0 +1,6 @@
+aws-auto-go-app
+.env
+.DS_Store
+cover.out
+report.xml
+data

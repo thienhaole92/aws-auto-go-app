@@ -1,0 +1,38 @@
+SERVICE_NAME = aws-auto-go-app
+
+.PHONY: pre-commit
+pre-commit:
+	go mod tidy
+	go vet ./...
+	go fmt ./...
+
+.PHONY: build-image
+build-image:
+	docker build --build-arg COMMIT_SHA=latest -f ./Dockerfile -t thienhaole92/$(SERVICE_NAME):latest .
+
+.PHONY:pre-gci
+pre-gci:
+	go install github.com/daixiang0/gci@latest
+
+.PHONY:gci
+gci: pre-gci
+	gci write --skip-generated -s standard -s default .
+
+.PHONY:pre-lint
+pre-lint:
+	go install mvdan.cc/gofumpt@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+.PHONY:lint
+lint: pre-lint
+	gofumpt -l -w .
+	golangci-lint run
+
+.PHONY:pre-test-go
+pre-test-go:
+	go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo
+	go install -mod=mod github.com/boumenot/gocover-cobertura
+
+.PHONY:test-go
+test-go: pre-test-go
+	ginkgo run -r --race --keep-going --junit-report report.xml --cover --coverprofile cover.out
