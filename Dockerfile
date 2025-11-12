@@ -47,6 +47,7 @@ WORKDIR /app
 
 # Copy the compiled binary
 COPY --from=builder --chown=nonroot:nonroot /src/aws-auto-go-app /app/aws-auto-go-app
+COPY --chown=nonroot:nonroot db/migrations/ /app/db/migrations/
 
 # Use ENTRYPOINT for better shell signal handling
 ENTRYPOINT ["/app/aws-auto-go-app"]
